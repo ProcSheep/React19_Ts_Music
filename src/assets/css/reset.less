@@ -1,0 +1,37 @@
+@import './variable.less';
+
+html{
+  line-height: 1.15;
+}
+
+body,
+h1,
+h2,
+h3,
+h4,
+ul,
+li {
+  margin: 0;
+  padding: 0;
+}
+
+ul li {
+  list-style: none;
+}
+/* 
+  text-decoration 是一个用于设置文本修饰效果的 CSS 属性。它可以为文本添加下划线、上划线、删除线等效果。
+  none 表示不添加任何文本修饰。在默认情况下，超链接通常带有下划线，使用 text-decoration: none; 可以去除这个下划线，让超链接看起来更简洁。 
+*/
+a {
+  text-decoration: none;
+  color: @textColor;
+}
+/* 
+  vertical-align: top;
+  vertical-align 属性用于设置行内元素或表格单元格内容的垂直对齐方式。
+  top 表示将元素的顶部与父元素的顶部对齐。在默认情况下，<img> 元素是行内元素，它在父元素中会按照基线对齐，这可能会导致图像下方出现一些不必要的空白间隙。
+  使用 vertical-align: top; 可以将图像顶部与父元素顶部对齐，从而消除这个间隙
+*/
+img {
+  vertical-align: top;
+}

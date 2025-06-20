@@ -1,6 +1,6 @@
 import js from '@eslint/js'; // ESLint 官方推荐规则
 import prettier from 'eslint-plugin-prettier'; // 引入prettier
-import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended'; // eslint-config-prettier
+import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended'; // eslint-config-prettier规则
 import reactHooks from 'eslint-plugin-react-hooks'; // React Hooks 检查插件
 import reactRefresh from 'eslint-plugin-react-refresh'; // React Refresh 插件
 import globals from 'globals'; // 预定义全局变量（如浏览器环境）
@@ -26,7 +26,8 @@ export default tseslint.config(
         'warn',
         { allowConstantExport: true },
       ],
-      'prettier/prettier': 'error', // 将 Prettier 错误视为 ESLint 错误
+      'prettier/prettier': ['error', { "endOfLine": "auto", "trailingComma": "es5" }], // 将 Prettier 错误视为 ESLint 错误, 在eslint添加新规则,同时影响prettier
+      '@typescript-eslint/no-explicit-any': 'off', // 关闭 any 类型检查
     },
   },
 )

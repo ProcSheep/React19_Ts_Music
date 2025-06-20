@@ -1,37 +1,30 @@
-import { useState } from "react"
-import "./App.css"
-import reactLogo from "./assets/react.svg"
-import viteLogo from "/vite.svg"
+import { Suspense } from "react"
+import { shallowEqual } from "react-redux"
+import { Link, useRoutes } from "react-router-dom"
+import routes from "./router"
+import { useAppSelector } from "./store"
 
 function App() {
-  const [count, setCount] = useState(0)
-
-  const a = "12"
-  console.log(a)
+  const { count, name } = useAppSelector(
+    (state) => ({
+      count: state.counter.count,
+      name: state.counter.name,
+    }),
+    shallowEqual
+  )
 
   return (
-    <>
+    <div className="App">
       <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+        <Link to="/discover">发现音乐</Link>
+        <Link to="/mine">我的音乐</Link>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+      <h2>
+        当前计数: {count} 名字: {name}
+      </h2>
+      {/* 懒加载过程中,临时加载显示,可以是字符串,也可以是组件(比如加载页面) */}
+      <Suspense fallback="loading....">{useRoutes(routes)}</Suspense>
+    </div>
   )
 }
 
