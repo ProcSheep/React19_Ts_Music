@@ -5,10 +5,14 @@ import { defineConfig } from "vite"
 const resolve = (pathName: string) => path.resolve(__dirname, pathName)
 // https://vite.dev/config/
 export default defineConfig({
+  mode: "production",
   plugins: [react()],
   resolve: {
     alias: {
       "@": resolve("src"),
     },
+  },
+  server: {
+    port: 3000,
   },
 })
