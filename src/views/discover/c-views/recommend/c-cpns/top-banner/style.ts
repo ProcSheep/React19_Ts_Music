@@ -77,6 +77,7 @@ export const BannerControl = styled.div`
   /* 竖直方向居中 */
   top: 50%;
   transform: translateY(-50%);
+  height: 63px; /* 元素内子元素btn全部绝对定位,高度塌陷 */
 
   .btn {
     position: absolute;

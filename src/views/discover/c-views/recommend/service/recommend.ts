@@ -5,3 +5,22 @@ export function getBanners() {
     url: "/banner",
   })
 }
+
+export function getHotRecommend() {
+  return hyRequest1.get({
+    url: "/personalized",
+  })
+}
+
+export function getNewAlbum() {
+  return hyRequest1.get({
+    url: "/album/newest",
+  })
+}
+
+export function getPlayList(id: number) {
+  return hyRequest1.get({
+    url: "/playlist/detail",
+    params: { id },
+  })
+}

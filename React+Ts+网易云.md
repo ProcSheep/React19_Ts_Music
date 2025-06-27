@@ -18,7 +18,7 @@
 - 6.css重置: 下载less和默认css `npm i normalize.css less`,配置css文件夹内的文件(略),最后由index.less统一导出,然后在最外层的main.ts引入
 - 7.网络请求: 下载 `npm i axios`, 把之前封装好的axios包复制过来,配置好生产/开发环境下的url路径
 
-## 函数/类组件的TS配置
+## **函数/类组件的TS配置**
 - ==**1.函数组件结合TS的配置(主要)**==
 - ==**views内默认文件index.ts的格式如下**==
 - 使用snippet generator, 并在`typescriptreact.json`中配置代码片段
@@ -383,7 +383,7 @@
       )
     }
   ```
-## react中的样式
+## **react中的样式**
 - 应用styled-components的css in js方案, 下载: `npm i styled-components` (另外的一个优秀库 emotion)
 - ==关于通用的样式如何写?== 可以封装为类,也可以混入(theme主题),在爱彼迎都用过的,这里用封装为类的写法,更加简洁
 - 在assets/css/common.less,添加通用样式
@@ -412,7 +412,7 @@
     export default HeaderWrapper
   ```
 
-## 图片资源
+## **图片资源**
 - 网易云的图片大多为精灵图,为了节省后端资源,精灵图需要通过定位来显示指定位置来显示对应效果
 - 图片资源已经复制进入`assets/img`中,另外,提前配置好图片显示,实例如下
   ```less
@@ -620,7 +620,7 @@
       )
     }
   ```
-## 文件划分
+## **文件划分**
 - 接下来马上进行页面内容渲染
 - **需要进行网络请求和存储store可以分为两种封装方式**
   - ==一种是以功能为主,一种是以业务为主==;
@@ -822,5 +822,398 @@
   ```
   > 1.afterChange是自带的事件,在轮播后触发回调,此时设置currentIndex的值,对应的dots自动高亮
   > 2.handleGoTo新增功能,自定义的dots点击后不会触发轮播图跳转,和前面同理,运用组件自带事件goTo,跳转到想要跳转的页面
+### content
+- 组件: /c-cpns/hot-recommend
+- 示意图: 
+  [![pVm7MjO.png](https://s21.ax1x.com/2025/06/27/pVm7MjO.png)](https://imgse.com/i/pVm7MjO)
+#### 整体布局
+- 在推荐页面(recommend外层index): 在顶层轮播图(TopBanner)下面是网页内容区域
+  ```tsx
+    <RecommendWrapper>
+      <TopBanner />   
+      <div className="content wrap-v2">
+        <div className="left">
+          <HotRecommend />
+        </div>
+        <div className="right">right</div>
+      </div>
+    </RecommendWrapper>
+  ```
+- 整个的内容区域也有一个背景图,如下
+  [![pVm3OXR.png](https://s21.ax1x.com/2025/06/26/pVm3OXR.png)](https://imgse.com/i/pVm3OXR)
+- 封装左右两侧组件,先封装左侧组件(热门推荐板块),在本文件cpns新建hot-recommend,如下
+  ```tsx
+    <HotRecommendWrapper>
+      <AreaHeaderV1
+        title="热门推荐"
+        keywords={["华语", "摇滚", "民谣", "电子", "流行"]}
+        moreLink="/discover/songs"
+      />
+      HotRecommend
+    </HotRecommendWrapper>
+  ```
+  > ==接下来马上说明AreaHeaderV1组件==
+#### 顶部导航(通用)
+- ==封装通用的顶部组件AreaHeaderV1,这个组件在许多地方都会用==
+- 通用组件统一在`/src/components/area-header-v1`中封装
+- 组件可以父传子,接受定制化,接受参数如下(仅标题为必穿属性)
+  ```tsx
+    interface IProps {
+      children?: ReactNode
+      title: string
+      keywords?: string[]
+      moreText?: string
+      moreLink?: string
+    }
+  ```
+  > 在没有ts的时候,当时父传子为了规定类型还用过一个PropType包
+- ==基础页面结构,很简单==
+  ```tsx
+    const AreaHeaderV1: React.FC<IProps> = (props) => {
+      // 如果没有传值,默认给一些值
+      const { title, keywords = [], moreText = "更多", moreLink = "/" } = props
 
+      return (
+        <AreaHeaderV1Wrapper className="sprite_02">
+          <div className="left">
+            <h3 className="title">{title}</h3>
+            <div className="keywords">
+              {/* 如果keywords为空数组,map不会执行内部的回调函数 */}
+              {keywords.map((item) => {
+                return (
+                  <div className="item" key={item}>
+                    <span className="link">{item}</span>
+                    <span className="divider">|</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+          <div className="right">
+            <Link className="more" to={moreLink}>
+              {moreText}
+            </Link>
+            <i className="icon sprite_02"></i>
+          </div>
+        </AreaHeaderV1Wrapper>
+      )
+    }
+  ```
+  > 1.图标部分都是精灵图,来自同一张sprite_02
+  > 2.跳转页面使用Link,跳转注册过的路由页面
+#### 推荐内容(通用)
+- 1.网络数据请求: 接口`/personalized`,在service + store中配置请求,在recommend/index.tsx中派发数据,在hot-recommend中获取store数据,所有流程很简单,可参考banner数据请求,代码略
+- 2.封装内容区域通用组件`/components/song-menu-item`,也没有任何难度,精灵图用的比较多,接受参数itemData,为hotRecommend返回数组的单项item,在hot-recommend中引入通用组件并父传子即可(代码略)
+- 下面是song-menu-item的基本结构
+  ```tsx
+    <MenuItemWrapper className="SongMenuItem">
+      <div className="top">
+        {/* 小细节: MenuItem动态请求图片的大小,小图片减少请求和渲染压力 */}
+        <img src={getImageSize(itemData.picUrl, 140)} alt="" />
+        {/* 许多精灵图,包括2个蒙版cover,2个图标icon(耳机/播放) */}
+        <div className="cover sprite_cover">
+          <div className="info sprite_cover">
+            <span>
+              <i className="sprite_icon headset"></i>
+              {/* 播放量格式化: 大于10万的以万为单位 */}
+              <span className="count">{formatCount(itemData.playCount)}</span>
+            </span>
+            <i className="sprite_icon play"></i>
+          </div>
+        </div>
+      </div>
+      <div className="bottom">{itemData.name}</div>
+    </MenuItemWrapper>
+  ```
+- 格式化的操作:`/utils/format`
+- ==1.图片大小格式化(对于MenuItem请求图片大小未必一致)==
+  ```ts
+    export function getImageSize(
+      imageUrl: string,
+      width: number,
+      height: number = width // 大部分图片是正方形,为了方便,如果不传高度,默认宽=高
+    ) {
+      return imageUrl + `?param=${width}x${height}`
+    }
+  ```
+- 2.播放器格式化
+  ```ts
+    export function formatCount(count: number) {
+      if (count > 100000) {
+        return Math.floor(count / 10000) + "万"
+      } else {
+        return count
+      }
+    }
+  ```
+### new-album
+- 位置: `/c-cpns/new-album`
+- 页面:
+  [![pVm7KgK.png](https://s21.ax1x.com/2025/06/27/pVm7KgK.png)](https://imgse.com/i/pVm7KgK)
+#### **网络请求整理**
+- 新增对新歌单的数据请求(`/albums/newest`),代码略(service+store)
+- ==整理recommend系列store的网络请求,使用builder方法如下,代码太繁琐==
+  ```ts
+    const recommendSlice = createSlice({
+      name: "recommend",
+      initialState,
+      reducers: {},
+      extraReducers: (builder) => {
+        builder.addCase(fetchBannerDataAction.fulfilled, (state, { payload }) => {
+          state.banners = payload.banners
+        })
+        builder.addCase(fetchBannerDataAction.rejected, (state, action) => {
+          console.log("轮播图数据请求失败:", action.error)
+        })
+        // ===================================
+        builder.addCase(
+          fetcchHotRecommendAction.fulfilled,
+          (state, { payload }) => {
+            state.hotRecommends = payload.result
+          }
+        )
+        builder.addCase(fetcchHotRecommendAction.rejected, (state, action) => {
+          console.log("热门推荐数据请求失败:", action.error)
+        })
+        // ===================================
+        builder.addCase(fetchNewAlbumAction.fulfilled, (state, { payload }) => {
+          state.newAlbum = payload.albums
+        })
+        builder.addCase(fetchNewAlbumAction.rejected, (state, action) => {
+          console.log("新歌单数据请求失败:", action.error)
+        })
+      },
+    })
+
+    // 异步请求数据
+    export const fetchBannerDataAction = createAsyncThunk("banners", async () => {
+      const res = await getBanners()
+      return res // axios封装自带.data
+    })
+
+    export const fetcchHotRecommendAction = createAsyncThunk(
+      "hotRecommend",
+      async () => {
+        const res = await getHotRecommend(8)
+        return res
+      }
+    )
+
+    export const fetchNewAlbumAction = createAsyncThunk("newAlbum", async () => {
+      const res = await getNewAlbum() // 固定请求12个数据
+      return res
+    })
+  ```
+- ==**优化,合并createAsyncThunk + reducer处理异步**==
+  ```ts
+    const recommendSlice = createSlice({
+      name: "recommend",
+      initialState,
+      reducers: {
+        changeBannerAction(state, { payload }) {
+          state.banners = payload
+        },
+        changeRecommendAction(state, { payload }) {
+          state.hotRecommends = payload
+        },
+        changeAlbumAction(state, { payload }) {
+          state.newAlbums = payload
+        },
+      },
+    })
+
+    // 合并的异步请求, _代表忽略这个参数,第一个参数是必选参数payload,调用这个函数时传参用的
+    // 这么合并也有要求,就是每个网络请求都不需要传递参数,否则还是分开写更好,分别传参更加清晰
+    export const fetchRecommendDataAction = createAsyncThunk(
+      "fetchData",
+      (_, { dispatch }) => {
+        getBanners().then((res) => {
+          dispatch(changeBannerAction(res.banners))
+        })
+        getHotRecommend().then((res) => {
+          dispatch(changeRecommendAction(res.result))
+        })
+        getNewAlbum().then((res) => {
+          dispatch(changeAlbumAction(res.albums))
+        })
+      }
+    )
+
+    const { changeBannerAction, changeRecommendAction, changeAlbumAction } =
+      recommendSlice.actions
+    export default recommendSlice.reducer
+  ```
+  > ==最后记得派发store内执行的函数也要从原来的3个分别派发改为统一一个函数派发(recommend最外层index.tsx)==
+  > ==这么合并也有要求,就是每个网络请求都不需要传递参数,否则还是分开写更好,分别传参更加清晰==
+  > ==有一个地方需要处理,组件热门推荐只需要前8个数据,但是后端固定请求30个,所以在hot-recommend的相关代码处slice截取一下==
+#### 歌单轮播图
+- 从store内获取album数据后进行页面构建(固定12条,只用前10条)
+- ==轮播共2页,一页五个数据,两次循环,逻辑很简单,本质是数据处理==
+  ```tsx
+    <div className="banner">
+      <Carousel ref={bannerRef} dots={false} speed={1500}>
+        {/* 双重遍历,先遍历页,再遍历页内数据 */}
+        {[0, 1].map((item) => {
+          return (
+            // 一页放五个数据,slice截取数据[x,y)
+            <div className="album-list">
+              {newAlbums.slice(item * 5, (item + 1) * 5).map((album) => {
+                return <div>{album.name}</div>
+              })}
+            </div>
+          )
+        })}
+      </Carousel>
+    </div>
+  ```
+  > 上面是简单示例,之后把album数据传入通用组件,在通用组件内部在对数据进行详细的划分,搭建对应的页面结构
+#### 歌单内容(通用)
+- ==封装一个通用组件用于处理同样类似的页面结构(`/components/new-album-item`)==
+- 1.注意在应用轮播图组件Carousel过程中,注意别人封装组件的特性,有时候css样式加不上去不是你的问题
+  ```tsx
+    <Carousel ref={bannerRef} dots={false} speed={1500}>
+      {/* 双重遍历,先遍历页,再遍历页内数据 */}
+      {[0, 1].map((item, index) => {
+        return (
+          // 一页放五个数据,slice截取数据[x,y)
+          <div key={index}>
+            {/* Carousel组件内会自动把最外层div附加内联样式,优先级高于外部样式,它会覆盖我们想要的样式
+                所以我们外层嵌套一个div,内部是自己样式的div(album-list)*/}
+            <div className="album-list">
+              {newAlbums.slice(item * 5, (item + 1) * 5).map((album) => {
+                return <NewAlbumItem itemData={album} />
+              })}
+            </div>
+          </div>
+        )
+      })}
+    </Carousel>
+  ```
+- 2.通用组件内部结构,接受album数组单项数据,父传子给itemData
+  ```tsx
+    <AlbumWrapper>
+      <div className="top">
+        <img src={getImageSize(itemData.picUrl, 100)} className="img" />
+        <i className="cover sprite_cover"></i>
+      </div>
+      <div className="bottom">
+        <div className="name">{itemData.name}</div>
+        <div className="artist">{itemData.artist.name}</div>
+      </div>
+    </AlbumWrapper>
+  ```
+### top-ranking
+- 排行榜: /cpns/top-ranking
+- 如图: 
+  [![pVm7u36.png](https://s21.ax1x.com/2025/06/27/pVm7u36.png)](https://imgse.com/i/pVm7u36)
+#### 结构搭建
+- 1.榜单的背景也是个图片,因为它的大小固定,所以css的宽高必须严格规定,代码略
+  [![pVm7n9x.png](https://s21.ax1x.com/2025/06/27/pVm7n9x.png)](https://imgse.com/i/pVm7n9x)
+- 2.根据榜单id获取对应歌单数据
+  - 飙升榜: 19723756
+  - 新歌榜: 3779629
+  - 原创榜: 2884035
+- 3.网络请求`/playlist/detail?id=123456`,==由于需要传递参数id,所以不合并进入fetchRecommendDataAction函数==,另起新的函数`fetchRankingDataAction`,代码略
+- ==4.榜单数据请求的思路(recommend的store部分):==
+  - 1.分开请求,分开处理(3次)
+    - 优点: 数据分离,先请求到先渲染,不会被阻塞
+    - 缺点: 无法统一处理,必须分三次处理数据,构建相应的页面
+    ```ts
+      // 获取榜单的数据,由于需要传递参数,所以不便于合并进入fetchRecommendDataAction
+      const rankingIds = [19723756, 3779629, 2884035]
+      export const fetchRankingDataAction = createAsyncThunk(
+        "rankingData",
+        (_, { dispatch }) => {
+          for (const id of rankingIds)
+            getPlayList(id).then((res) => {
+              // 三个数据单独管理,没有前后顺序,不会阻塞
+              switch (id) {
+                case 19723756:
+                  console.log("1")
+                  break
+                case 3779629:
+                  console.log("1")
+                  break
+                case 2884035:
+                  console.log("1")
+                  break
+              }
+            })
+        }
+      )
+    ```
+  - 2.统一放入数组 (==选择这个方法==)
+    - 优点: 可以统一处理数据,三者数据格式相似,一个for循环兼顾3个榜单的页面构建
+    - 缺点: 必须等待所有数据请求到之后再统一渲染
+- ==之前做过,按顺序获取保存所有的数据,使用Promise.all==
+- ==**重点回忆Promise的用法和类型问题(网络请求课程)**==
+  ```ts
+    // 获取榜单的数据,由于需要传递参数,所以不便于合并进入fetchRecommendDataAction
+    const rankingIds = [19723756, 3779629, 2884035]
+    // 回忆重点: new Promise的泛型是必传类型,它指向resolve参数的类型,同时也是then中res的类型
+    const promises: Promise<any>[] = []
+    export const fetchRankingDataAction = createAsyncThunk(
+      "rankingData",
+      (_, { dispatch }) => {
+        // 按顺序将三个数据全部拿到后放入一个数组
+        // 顺序的思考: 单纯for循环只能保证发出网络请求的顺序,但是接受res数据的顺序无法保证,这却决于服务器,网络等条件
+        for (const id of rankingIds) {
+          promises.push(getPlayList(id))
+        }
+        // 泛型定义的类型: res为any[]类型; 这里的res是保证顺序的网络请求数组集合
+        Promise.all(promises).then((res) => {
+          const rankings = res.map((item) => item.playlist)
+          dispatch(changeRankingAction(rankings))
+        })
+      }
+    )
+  ```
+  > 定义的rankings状态和action代码略
+#### 排行榜组件
+- 获取3个榜单的数据后,封装组件进行数据展示,这次不是通用组件(本地封装`top-ranking-item`)
+- 和之前一样获取数组内单项item数据父传子渲染页面,页面结构如下
+  ```tsx
+    <RankingItemWrapper>
+      {/* 榜单头部 */}
+      <div className="header">
+        <div className="image">
+          <img
+            className="img"
+            src={getImageSize(itemData.coverImgUrl, 80)}
+            alt=""
+          />
+          <a href="" className="sprite_cover"></a>
+        </div>
+        <div className="info">
+          <div className="name">{itemData.name}</div>
+          <div>
+            <button className="btn play sprite_02"></button>
+            <button className="btn favor sprite_02"></button>
+          </div>
+        </div>
+      </div>
+      {/* 榜单列表 */}
+      <div className="list">
+        {tracks.slice(0, 10).map((item: any, index: number) => {
+          return (
+            <div className="item">
+              <div className="index">{index + 1}</div>
+              <div className="info">
+                <div className="name">{item.name}</div>
+                <div className="operate">
+                  <button className="btn sprite_02 play"></button>
+                  <button className="btn sprite_icon2 add"></button>
+                  <button className="btn sprite_02 favor"></button>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      {/* 榜单底部 */}
+      <div className="footer">
+        <a href="/discover/ranking">查看全部 &gt;</a>
+      </div>
+    </RankingItemWrapper>
+  ```
 
