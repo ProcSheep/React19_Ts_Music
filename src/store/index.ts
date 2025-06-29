@@ -1,4 +1,5 @@
 import recommendReducer from "@/views/discover/c-views/recommend/store/recommend"
+import playerReducer from "@/views/player/store/player"
 import { configureStore } from "@reduxjs/toolkit"
 import {
   shallowEqual,
@@ -10,11 +11,12 @@ import {
 const store = configureStore({
   reducer: {
     recommend: recommendReducer,
+    player: playerReducer,
   },
 })
 
 type GetStateFnType = typeof store.getState
-type IRootState = ReturnType<GetStateFnType>
+export type IRootState = ReturnType<GetStateFnType>
 type DispatchType = typeof store.dispatch
 // 必要的: 最终方案,解决useSelector的参数类型问题
 export const useAppSelector: TypedUseSelectorHook<IRootState> = useSelector

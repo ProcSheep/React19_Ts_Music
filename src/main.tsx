@@ -2,6 +2,7 @@
 import App from "@/App"
 import "@/assets/css/index.less" // 引入所有的less(包括normalize.css)
 import store from "@/store" // store数据
+import "@ant-design/v5-patch-for-react-19"
 import { createRoot } from "react-dom/client"
 import { Provider } from "react-redux" // 给store公开数据的组件
 import { HashRouter } from "react-router-dom" // 路由

@@ -24,3 +24,12 @@ export function getPlayList(id: number) {
     params: { id },
   })
 }
+
+export function getArtistList(limit = 5) {
+  return hyRequest1.get({
+    url: "/artist/list",
+    params: {
+      limit,
+    },
+  })
+}

@@ -28,6 +28,7 @@ export default tseslint.config(
       ],
       'prettier/prettier': ['error', { "endOfLine": "auto", "trailingComma": "es5" }], // 将 Prettier 错误视为 ESLint 错误, 在eslint添加新规则,同时影响prettier
       '@typescript-eslint/no-explicit-any': 'off', // 关闭 any 类型检查
+      '@typescript-eslint/no-unused-expressions': 'off' // 关闭三元表达式副作用检测
     },
   },
 )

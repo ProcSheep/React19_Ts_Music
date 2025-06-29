@@ -1,4 +1,6 @@
+import { useAppDispatch } from "@/store"
 import { getImageSize } from "@/utils/format"
+import { fetchCurrentSongAction } from "@/views/player/store/player"
 import type { ReactNode } from "react"
 import { memo } from "react"
 import { RankingItemWrapper } from "./style"
@@ -9,8 +11,16 @@ interface IProps {
 }
 
 const TopRankingItem: React.FC<IProps> = (props) => {
-  const { itemData } = props
-  const { tracks = [] } = itemData // 榜单的列表数据可能没有
+  // 给默认值是因为服务器请求数据不稳定,可能请求不到数据
+  const { itemData = {} } = props
+  const { tracks = [] } = itemData
+
+  const dispatch = useAppDispatch()
+  // 请求歌曲数据
+  function handlePlayClick(id: number) {
+    dispatch(fetchCurrentSongAction(id))
+  }
+
   return (
     <RankingItemWrapper>
       {/* 榜单头部 */}
@@ -35,12 +45,15 @@ const TopRankingItem: React.FC<IProps> = (props) => {
       <div className="list">
         {tracks.slice(0, 10).map((item: any, index: number) => {
           return (
-            <div className="item">
+            <div className="item" key={index}>
               <div className="index">{index + 1}</div>
               <div className="info">
                 <div className="name">{item.name}</div>
                 <div className="operate">
-                  <button className="btn sprite_02 play"></button>
+                  <button
+                    className="btn sprite_02 play"
+                    onClick={() => handlePlayClick(item.id)}
+                  ></button>
                   <button className="btn sprite_icon2 add"></button>
                   <button className="btn sprite_02 favor"></button>
                 </div>

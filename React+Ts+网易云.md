@@ -231,7 +231,7 @@
   ```
   > ==**注意**: 二级路由如果懒加载也要配置一个Suspense,这样在懒加载时可以单独仅在二级路由部分显示loading....,如果二级路由和一级路由公用一个Suspense(即App.jsx里那个),那么二级路由加载会使整个Suspense内的所有路由都显示loading....,即使这时一级路由页面已经加载完了,但是在Suspense内作为一个整体,必须跟着二级路由再次显示一次loading...,这样不好,**所以需要给二级路由们单独设置一个Suspense**,但是如果二级路由没有懒加载就可以忽略这个问题==
 
-## 状态管理
+## **状态管理**
 - 状态管理: redux + @redux.js/toolkit(redux工具,更方便使用redux)
 - 下载: `npm i react-redux @reduxjs/toolkit`
 - 基础使用: 
@@ -364,7 +364,7 @@
       export const useAppDispatch: () => DispatchType = useDispatch
       export const AppShallowEqual = shallowEqual
     ```
-  > ==补充: useAppDispatch的类型推导还是有用的,所以要写!==
+  > ==补充: useAppDispatch的类型推导还是有用的,涉及传参类型推导等问题,反正要写!==
 ## 结构搭建
 - 一级路由导航的搭建,顶部导航是一个整体且一直存在,底部同理有底部信息栏一直存在,所以是一个汉堡结构,顶部和底部不变,中间的内容会切换
 - 封装组件`/components` + app-header / app-footer
@@ -1215,5 +1215,565 @@
         <a href="/discover/ranking">查看全部 &gt;</a>
       </div>
     </RankingItemWrapper>
+  ```
+#### 右侧区域
+- 布局页面的右侧区域,登录,入驻歌手,热门主播榜单等,都是基础的页面搭建,如下
+  [![pVnFxUI.png](https://s21.ax1x.com/2025/06/28/pVnFxUI.png)](https://imgse.com/i/pVnFxUI)
+- 1.登录区域很简单`/c-cpns/user-login`,代码略
+- 2.入驻歌手`settle-singer`
+  - 顶部组件封装为通用组件`area-header-v2`,逻辑与v1版本基本一致,代码略
+  - 内容区域请求入驻歌手的数据,没有对应接口,用`artist/list`接口代替,代码略
+  - 页面结构搭建分为上中下三部分,详细见文件代码,很简单
+- 3.热门主播`hot-anchor`
+  - 没有合适的接口,直接使用本地的数据`asset/data/local-data.ts`
+  - 简单搭建页面,使用通用标题组件V2,代码略
+## **歌曲播放**
+- ==播放功能的文件位置考量==
+  - 播放器在页面底部,由于内部含有过多的逻辑,比如播放的各种设置,歌词等,不适合封装进通用组件,所以在views下新建player文件夹,内部包含所有的播放相关的页面,逻辑代码等
+  - 代码位置: `/views/player`
+### 播放器搭建
+- 播放器: `/app-player-bar`
+- 构造如下: ==比较复杂,分多个wrapper,代码略==
+  [![pVne5UH.png](https://s21.ax1x.com/2025/06/28/pVne5UH.png)](https://imgse.com/i/pVne5UH)
+- 最后,所有的页面都有页面播放器,所以这个组件在App.tsx内应用组件
+  ```tsx
+    <div className="App">
+        {/* 顶部: 一级路由导航 */}
+        <AppHeader />
+        {/* 懒加载过程中,临时加载显示,可以是字符串,也可以是组件(比如加载页面) */}
+        <Suspense fallback="loading....">{useRoutes(routes)}</Suspense>
+        {/* 播放器工具栏 */}
+        <AppPlayerBar />
+        {/* 底部信息栏 */}
+        <AppFooter />
+    </div>
+  ```
+### 文件结构
+- ==播放歌曲的状态统一由**新的store-reducer管理,名为player**==,而播放器组件app-player-bar仅负责播放音乐,不在此组件内部直接对歌曲进行网络请求
+- ==**操作逻辑:**== 之前封装的推荐页面中,有许多歌曲和播放按钮,可以通过给播放按钮设置事件,==向player派发事件+传参,从而获取到当前点击歌曲的信息,然后改变store内的信息==,最后播放器根据store播放新的歌曲
+  > 分层结构: 通过redux中介管理歌曲数据后,可以更好的获取数据,对数据分类和处理,比起直接从播放器获取歌曲要简单,容易维护
+- 1.在player文件夹新建store,创建新的reducer,==然后导出,在store中注册==
+  ```ts
+    import { createSlice } from "@reduxjs/toolkit"
+
+    interface IPlayerState {
+      currentSong: any
+    }
+
+    const initialState: IPlayerState = {
+      currentSong: {},
+    }
+
+    const playerSlice = createSlice({
+      name: "player",
+      initialState,
+      reducers: {},
+    })
+
+    export default playerSlice.reducer
+  ```
+  ```ts
+    // store/idnex.ts
+    const store = configureStore({
+      reducer: {
+        recommend: recommendReducer,
+    +   player: playerReducer,
+      },
+    })
+  ```
+### 播放歌曲
+- 继续在播放器组件内完善功能(app-player-bar)
+- ==为了更好的测试,先在store内currentSong内部写死一个歌曲的数据,之后再动态获取,获取歌曲的数据`song/detail?ids=123456`,复制song内数据==
+  ```ts
+    const { currentSong } = useAppSelector(
+      (state) => ({
+        currentSong: state.player.currentSong,
+      }),
+      AppShallowEqual
+    )
+  ```
+- ==**之前小程序学习过,所以理论上不难,逻辑比较复杂,多回忆回忆**==
+- 1.获取歌曲的地址,封装一个工具函数utils/handle-player.ts
+  ```ts
+    // 音乐播放地址的整理
+    export function getPlayerUrl(id: number) {
+      return `https://music.163.com/song/media/outer/url?id=${id}.mp3`
+    }
+  ```
+- 2.音乐播放由audio控制,html5新的媒体播放标签
+  ```tsx
+    {/* <audio>是用于嵌入音频内容的原生标签，属于 HTML5 新增的多媒体元素 */}
+    <audio ref={audioRef} />
+  ```
+- 3.获取audio的dom实例后,设置属性,播放歌曲
+- ==注意浏览器对于自动播放音乐的特性==
+  ```ts
+    const audioRef = useRef<HTMLAudioElement>(null)
+    /** 组件内副作用操作 */
+    useEffect(() => {
+      // 1.音乐播放,audioRef一定有值,effect在dom挂载结束后才执行 (非空断言!)
+      audioRef.current!.src = getPlayerUrl(currentSong.id)
+      // 2.播放音乐,play()函数会返回promise函数,可以监听播放情况
+      // 特性: 浏览器禁止在用户刚进入页面,且在没有任何操作的情况下自动播放音乐
+      // 不过这个地方的代码也有用,比如后续切换歌曲的时候还是要播放的,这时可以执行play()
+      audioRef
+        .current!.play()
+        .then((res) => {
+          console.log("播放歌曲成功", res)
+          setIsPlaying(true)
+        })
+        .catch((err) => {
+          console.log("播放歌曲失败", err)
+          setIsPlaying(false) // 严谨性: 只要是播放失败的歌曲一律暂停
+        })
+    }, [currentSong]) // currentSong改变时(切换歌曲),重新执行一次里面的代码,播放新歌曲
+  ```
+- 4.通过控制按钮进行音乐播放,绑定html略
+- ==**关键点**==
+  - 1.setIsPlaying是异步的,所以顺序很重要
+  - 2.传递isPlaying属性,在ts情况下需要类型定义
+  ```ts
+    const [isPlaying, setIsPlaying] = useState(false) // 播放器状态
+
+    /** 组件内部的事件处理函数 */
+    // 点击播放按钮
+    function handlePlayBtnClick() {
+      // 1.控制音乐的播放与暂停
+      // 顺序上(1->2)防止异步问题,因为setIsPlaying操作是异步的,不会立马改变isPlaying的值
+      // 如果按钮是播放的,立即停止,并改变isPlaying为false; 如果按钮是暂停的,立即播放,并改变isPlaying为true
+      isPlaying
+        ? audioRef.current?.pause()
+        : audioRef.current?.play().catch(() => setIsPlaying(false)) // 严谨性: 只要是播放失败的歌曲一律暂停
+      // 2.改变播放按钮的状态
+      setIsPlaying(!isPlaying)
+    }
+  ```
+  ```tsx
+    {/* 左侧播放按钮 */}
+    <BarControl $isPlaying={isPlaying}></BarControl>
+  ```
+  ```ts
+    // ts的css传递js变量需要规定类型
+    interface IBarControl {
+      $isPlaying: boolean
+    }
+    // 下面本质是在进行函数调用,所以可以传递泛型来确定接受的参数的类型
+    export const BarControl = styled.div<IBarControl>`
+      .play {
+        width: 36px;
+        height: 36px;
+        margin: 0 8px;
+        /* 按钮定位改变显示"播放"与"暂停"的图标 */
+        background-position: 0
+          ${(props) => (props.$isPlaying ? "-165px" : "-204px")};
+      }
+    `
+  ```
+- 5.音乐播放进度条滚动
+- 首先监听音乐是否在播放
+  ```ts
+    const [process, setProcess] = useState(0) // 播放进度条
+    const [duration, setDuration] = useState(0) // 歌曲总时间
+
+    {/* 
+      onTimeUpdate: 媒体播放时,执行回调函数
+    */}
+    <audio ref={audioRef} onTimeUpdate={handleTimeUpdate} />
+  ```
+- 进度条播放时,更新百分比,这里的格式和组件Slider要求有关系
+  ```ts
+    // 音乐播放进度条的更新
+    function handleTimeUpdate() {
+      // 1.获取当前的播放时间和总时间(网易云给的总时间是毫秒,audio获取的时间单位是秒)
+      const currentTime = audioRef.current!.currentTime * 1000
+      // 2.计算当前歌曲的进度
+      const progress = ((currentTime) / duration) * 100
+      setProcess(progress)
+    }
+  ```
+- 总时间duration的获取,实在effect内部获取的,一旦请求到歌曲,立即从歌曲信息中获取到歌曲的总时间
+  ```ts
+    // 获取音乐的总时间
+    setDuration(currentSong.dt)
+  ```
+- 最后给组件设置属性
+  ```tsx
+    {/* 播放进度条,antd组件 */}
+    {/* 属性介绍: 
+        value: 百分比推动进度条的位置(类似50%),传入的值不能是0.5,而是50
+        step: 步长,默认为1,即改变1%进度条移动一次
+        tooltip: 删除进度条上的默认提示
+        onChangeComplete: 鼠标抬起触发,把当前值作为参数传入,即点击进度条抬起鼠标后,自动把点击位置的百分比信息传入参数
+    */}
+    <Slider
+      value={process}
+      step={0.5}
+      tooltip={{ formatter: null }}
+      onChangeComplete = {handleSliderChange}
+    />
+  ```
+- 6.格式化歌曲的播放时间`utils/format`
+  ```ts
+    // 格式化播放歌曲时间
+    export function formatTime(time: number) {
+      // 1.毫秒转为秒
+      const timeSeconds = time / 1000
+
+      // 2.获取分钟/秒钟
+      // 向下取整 例如: 100/60 = 1分钟余40秒
+      const minutes = Math.floor(timeSeconds / 60)
+      // 毫秒转秒可能会有小数,向下取整删除额外的小数点
+      const seconds = Math.floor(timeSeconds % 60)
+
+      // 3.格式化 MM:SS,数字不足0补位(ES6-ES12的语法...)
+      const formatMinutes = String(minutes).padStart(2, "0")
+      const formatSeconds = String(seconds).padStart(2, "0")
+
+      return `${formatMinutes}:${formatSeconds}`
+    }
+  ```
+- 格式化总时间duration和当前时间currentTime,duration设置过状态了
+  ```ts
+    const [currentTime, setCurrentTIme] = useState(0) // 歌曲的当前时间
+    // 音乐播放进度条的更新
+    function handleTimeUpdate() {
+      // ....
+      setCurrentTIme(currentTime * 1000) // 记录当前时间,一会格式化为歌曲时间,统一单位为毫秒
+    }
+  ```
+  ```tsx
+    <div className="time">
+      <span className="current">{formatTime(currentTime)}</span>
+      <span className="divider">/</span>
+      <span className="duration">{formatTime(duration)}</span>
+    </div>
+  ```
+### 进度条控制
+- ==进度条控制分为点击和拖拽两种,antd更新了函数,现在点击和拖拽可以由同一个函数onChange控制了,更加方便==
+  ```tsx
+    {/* 属性介绍: 
+        onChange: 当 Slider 的值发生改变时，会触发 onChange 事件，并把改变后的值作为参数传入, 无论拖拽和点击都会改变Slider的值,所以都会触发
+        onChangeComplete: 与mouseup和keyup触发时机一致，把当前值作为参数传入, 即当用户拖动滑块并释放鼠标时触发，此时返回的value是最终位置的百分比
+    */}
+    <Slider
+      onChangeComplete={handleSliderChangeComplete}
+      onChange={handleSliderChange}
+    />
+  ```
+  ```ts
+    /** 经测试,onChange功能无论拖拽还是点击都能完美执行功能,涵盖onChangeComplete功能,所以只用3即可 */
+    // 3.点击音乐进度条都会触发(例如50)
+    function handleSliderChange(value: number) {
+      // 1.获取点击位置的时间
+      const currentTime = (value / 100) * duration
+      // 2.设置当前播放器的时间audio (接受单位秒,而上面计算时duration单位为毫秒,统一下单位)
+      audioRef.current!.currentTime = currentTime / 1000
+      // 3.修改currentTime和progress,立即改变进度条,其实不改在handleTimeUpdate函数内也会修改currentTime,只不过需要等待audio播放1s去触发
+      setCurrentTime(currentTime)
+      setProcess(value)
+    }
+
+    // 4.拖拽进度条鼠标抬起时触发,接受当前位置的进度条参数 (测试)
+    function handleSliderChangeComplete(value: number) {
+      console.log(value)
+    }
+  ```
+### 歌词数据整理
+- 为了更好的模拟网络请求,封装请求歌曲信息的网络请求函数,参数为id
+  ```ts
+    // 获取歌曲信息
+    export function getSongDetail(ids: number) {
+      return hyRequest1.get({
+        url: "/song/detail",
+        params: {
+          ids,
+        },
+      })
+    }
+  ```
+  > 在App.tsx直接传入id请求,先这样临时做,代码略 (id: 2711834126)
+- 请求歌词的网络请求,参数也是id
+  ```ts
+    // 获取歌词信息
+    export function getSongLyric(id: number) {
+      return hyRequest1.get({
+        url: "/lyric",
+        params: {
+          id,
+        },
+      })
+    }
+  ```
+- 在store中,处理歌词的异步数据
+  ```ts
+    export const fetchCurrentSongAction = createAsyncThunk(
+      "currentSong",
+      (id: number, { dispatch }) => {
+        // 1.获取歌曲信息
+        getSongDetail(id).then((res) => {
+          if (!res.songs.length) return
+          const song = res.songs[0]
+          // 将歌曲信息保存进store
+          dispatch(changeCurrentSongAction(song))
+        })
+
+        // 2.获取歌词数据
+        getSongLyric(id).then((res) => {
+          if (!res.lrc.lyric) return
+          const lyricString = res.lrc.lyric // 字符串
+
+          // 解析歌词,封装为工具函数 /utils/parse-lyric.ts
+          const lyrics = parseLyric(lyricString)
+
+          // 将歌词保存进入store中
+          dispatch(changeLyricsAction(lyrics))
+        })
+      }
+    )
+
+    interface ILyric {
+      time: number
+      text: string
+    }
+
+    interface IPlayerState {
+      currentSong: any
+  +   lyrics: ILyric[]
+    }
+
+    const initialState: IPlayerState = {
+    // 自带默认值,防止进入页面数据还未请求到时出现页面显示缺失,网易云会把最后听的歌曲信息保存在本地,然后下次进入后,优先从本地获取歌曲数据先顶替显示
+    currentSong: {
+      // ... 2709792992
+    },
+    lyrics: [], // 保存解析过的歌词数据
+  }
+  ```
+- 歌词整理工具函数
+  ```ts
+    // utils/parse-lyric
+    interface ILyric {
+      time: number
+      text: string
+    }
+
+    // 匹配-正则表达式
+    const timeRegExp = /\[(\d{2}):(\d{2})\.(\d{2,3})\]/
+    export function parseLyric(lyricString: string) {
+      // 将解析好的歌词放入数组并返回出去
+      const lyrics: ILyric[] = []
+      // 1.歌词以\n分割,把整体字符串切割为一句一句的歌词数组
+      const lines: string[] = lyricString.split("\n")
+      // 2.把每句歌词解析为格式正确的对象
+      /**  匹配效果如下:
+      *  "[02:01.95]还有糖纸染上的香" ==> { time: xxx, text: "xxx" } (数组lyrics中的某一项item)
+      */
+      for (const line of lines) {
+        // 匹配歌词时间 可以打印看看res的结构
+        const res = timeRegExp.exec(line)
+        if (!res) continue
+
+        // 2.获取每一组的时间部分数据, 例如: 04 24 890 代表分,秒,毫秒 (统一转为毫秒)
+        const time1 = Number(res[1]) * 60 * 1000
+        const time2 = Number(res[2]) * 1000
+        // 如果毫秒数为2位,例如:04 24 89,这个89代表890ms而不是89ms,所以乘10
+        const time3 = res[3].length === 3 ? Number(res[3]) : Number(res[3]) * 10
+        const time = time1 + time2 + time3
+
+        // 3.获取每一组的文本数据
+        // 可以传入正则表达式,把时间部分替换为空字符串,剩下的不就是歌词数据了吗
+        const text = line.replace(timeRegExp, "")
+
+        // 4.把整理好的一组数据(时间+文本)放入数组lyrics
+        lyrics.push({ time, text })
+      }
+
+      return lyrics
+    }
+  ```
+- 歌词数据整理的最终效果: (==最终数据保存进入store中==)
+  000000000000000
+
+### 歌词匹配
+- ==上一步把歌词数据整理好存入store中,这一步拿取保存好的歌词数据,然后利用算法,根据当前歌曲的播放时间匹配这段时间的歌词数据==
+- 在播放器组件app-player-bar内
+  ```ts
+    // 音乐播放进度条的更新
+    function handleTimeUpdate() {
+      // 1.获取当前的播放时间和总时间(网易云给的总时间是毫秒,audio获取的时间单位是秒)
+      // 2.计算当前歌曲的进度 ......
+
+      // 3.根据当前时间匹配当前的歌词数据
+      let index = lyrics.length - 1 // 默认最后一句歌词,下面算法除了最后一句歌词都能匹配到
+      for (let i = 0; i < lyrics.length; i++) {
+        const lyric = lyrics[i]
+        if (lyric.time > currentTime) {
+          index = i - 1
+          break
+        }
+      }
+
+      // 4.匹配成功后,保存歌词序列,同时减少多余的匹配操作,每句歌词只会匹配一次
+      if (lyricIndex === index || index === -1) return
+      dispatch(changeLyricIndexAction(index))
+    }
+  ```
+  > 新的store的state和保存它的函数action代码省略
+- 歌词显示message,注意react19兼容问题,依照文档改即可
+.... (待解决)
+
+### 歌曲播放列表
+- 在store内新增播放列表和播放歌曲索引的状态管理
+  ```ts
+    interface IPlayerState {
+      // ......
+      playSongList: any[] 
+      playSongIndex: number
+    }
+  ```
+  > 状态就不写了,songlist默认给了2个歌曲的全部信息; songindex默认值为-1(代表当前播放歌曲在列表中的索引序号)
+- 重构请求歌曲的逻辑
+  ```ts
+    // (记住即可,类型问题)类型定义的参数: 第一个是函数, 第二个是传递参数的类型, 第三个是给getState定义类型,默认unknow
+    // IRootState是统一的store导出的类型
+    export const fetchCurrentSongAction = createAsyncThunk<
+      void,
+      number,
+      { state: IRootState }
+    >("currentSong", (id: number, { dispatch, getState }) => {
+      // 补: 从播放列表中尝试获取这首歌
+      const playSongList = getState().player.playSongList
+      const findIndex = playSongList.findIndex((item) => item.id === id)
+      if (findIndex === -1) {
+        console.log("没找到歌曲")
+        // 1.获取歌曲信息
+        getSongDetail(id).then((res) => {
+          if (!res.songs.length) return
+          const song = res.songs[0]
+          // 2.没有歌曲就添加进歌单 (末尾添加)
+          const newPlaySongList = [...playSongList]
+          newPlaySongList.push(song)
+          dispatch(changeCurrentSongAction(song))
+          dispatch(changeplaySongListAction(newPlaySongList))
+          dispatch(changeplaySongIndexAction(newPlaySongList.length - 1))
+        })
+      } else {
+        // 找到歌曲
+        const song = playSongList[findIndex]
+        dispatch(changeCurrentSongAction(song))
+        dispatch(changeplaySongIndexAction(findIndex))
+      }
+  ```
+  > ==简而言之就是,如果当前播放歌曲在播放列表中有保存,直接在store提取即可; 如果没有保存,那么网络请求歌曲的信息,并保存进播放列表; 与此同时同步currentSong,playSongList和playSongIndex的这三个状态的值==
+  > 对应的action就不写了,就是简单的payload的赋值
+  > 最后关于createAsyncThunk的泛型类型定义可以看看.d.ts文档,有点绕
+- 最后效果图如下: 当前听的歌曲正好是列表中没有的,所以这首新歌会被添加到store中,如下图
+  000000000000
+- ==为了更多地添加播放列表中的数据,在top-ranking-item中的播放按钮设置事件==
+  ```tsx
+    {/* 别找错了,是列表中的小项 (slice map内部的那些元素) */}
+    <button
+      className="btn sprite_02 play"
+      onClick={() => handlePlayClick(item.id)}
+    ></button>
+  ```
+  ```ts
+    const dispatch = useAppDispatch()
+    // 播放歌曲
+    function handlePlayClick(id: number) {
+      dispatch(fetchCurrentSongAction(id))
+    }
+  ```
+  > 在排行榜中,点击歌曲的播放按钮,就会执行添加歌曲的函数
+### 播放模式
+- 继续新增播放模式的状态控制
+  ```ts
+    playMode: 1, // 1: 顺序播放 2: 随机播放 3: 单曲循环
+  ```
+- 点击切换播放模式
+  ```ts
+    // 5.改变播放模式
+    function onChangePlayMode() {
+      let newPlayMode = playMode + 1
+      // playMode = 1/2/3
+      if (newPlayMode > 3) newPlayMode = 1
+      dispatch(changeplayModeAction(newPlayMode))
+    }
+  ```
+  ```tsx
+    <button
+      className="btn sprite_playbar loop"
+      onClick={onChangePlayMode}
+    ></button>
+  ```
+  ```ts
+  .loop {
+      background-position: ${(props) => {
+        switch (props.$playMode) {
+          case 1:
+            return "-3px -344px"
+          case 2:
+            return "-66px -248px"
+          case 3:
+            return "-66px -344px"
+        }
+      }};
+    }
+  ```
+### 播放测试
+- store内针对三种不同的播放模式制定不同切换歌曲代码,==使用新的异步函数处理==
+  ```ts
+    // * 处理歌曲播放模式的异步函数
+    export const changeMusicAction = createAsyncThunk<void, boolean, IThunkState>(
+      "changeMusic",
+      (isNext, { dispatch, getState }) => {
+        // 1.获取state中的值
+        const player = getState().player
+        const songList = player.playSongList
+        const songIndex = player.playSongIndex
+        const playMode = player.playMode
+
+        // 2.根据不同的切换模式切换歌曲索引
+        let newIndex = songIndex
+        if (playMode === 2) {
+          // 随机模式 (防止随机到自己)
+          let tempIndex = Math.floor(Math.random() * songList.length)
+          while (tempIndex === newIndex) {
+            tempIndex = Math.floor(Math.random() * songList.length)
+          }
+          newIndex = tempIndex
+        } else {
+          // 顺序模式和循环模式 (循环模式仅指歌曲循环,但是在切换模式上还是按照顺序来)
+          newIndex = isNext ? newIndex + 1 : newIndex - 1
+          // 处理越界问题
+          if (newIndex > songList.length - 1) newIndex = 0
+          if (newIndex < 0) newIndex = songList.length - 1
+        }
+
+        // 3.获取到当前歌曲
+        const song = songList[newIndex]
+        dispatch(changeCurrentSongAction(song))
+        dispatch(changeplaySongIndexAction(newIndex))
+
+        // 4.同理获取新歌的新歌词
+        getSongLyric(song.id).then((res) => {
+          if (!res.lrc.lyric) return
+          const lyricString = res.lrc.lyric // 字符串
+
+          // 解析歌词,封装为工具函数 /utils/parse-lyric.ts
+          const lyrics = parseLyric(lyricString)
+
+          // 将歌词保存进入store中
+          dispatch(changeLyricsAction(lyrics))
+        })
+      }
+    )
+  ```
+- 播放器(app-player-bar)按钮设置切换歌曲的事件 (按钮绑定的html不展示了)
+  ```ts
+    // 6.切换歌曲的函数
+    function handleChangeMusic(isNext: boolean) {
+      dispatch(changeMusicAction(isNext))
+    }
   ```
 
