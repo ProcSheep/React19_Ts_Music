@@ -1592,7 +1592,7 @@
     }
   ```
 - 歌词数据整理的最终效果: (==最终数据保存进入store中==)
-  000000000000000
+  [![pVn6l4g.png](https://s21.ax1x.com/2025/06/29/pVn6l4g.png)](https://imgse.com/i/pVn6l4g)
 
 ### 歌词匹配
 - ==上一步把歌词数据整理好存入store中,这一步拿取保存好的歌词数据,然后利用算法,根据当前歌曲的播放时间匹配这段时间的歌词数据==
@@ -1616,11 +1616,18 @@
       // 4.匹配成功后,保存歌词序列,同时减少多余的匹配操作,每句歌词只会匹配一次
       if (lyricIndex === index || index === -1) return
       dispatch(changeLyricIndexAction(index))
+
+      // 5.组件message歌词显示 (注意在antd5版本下,使用react19需要下载兼容包才能使用这个组件)
+      message.open({
+        content: lyrics[index].text,
+        key: "lyric", // 显示唯一一个
+        duration: 0, // 不会自动关闭
+      })
     }
   ```
   > 新的store的state和保存它的函数action代码省略
-- 歌词显示message,注意react19兼容问题,依照文档改即可
-.... (待解决)
+  > ==歌词显示message,注意react19兼容问题,依照文档改即可,但是样式问题没有解决好==
+ 
 
 ### 歌曲播放列表
 - 在store内新增播放列表和播放歌曲索引的状态管理
@@ -1668,7 +1675,7 @@
   > 对应的action就不写了,就是简单的payload的赋值
   > 最后关于createAsyncThunk的泛型类型定义可以看看.d.ts文档,有点绕
 - 最后效果图如下: 当前听的歌曲正好是列表中没有的,所以这首新歌会被添加到store中,如下图
-  000000000000
+  [![pVn63CQ.png](https://s21.ax1x.com/2025/06/29/pVn63CQ.png)](https://imgse.com/i/pVn63CQ)
 - ==为了更多地添加播放列表中的数据,在top-ranking-item中的播放按钮设置事件==
   ```tsx
     {/* 别找错了,是列表中的小项 (slice map内部的那些元素) */}
